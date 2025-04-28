@@ -1,0 +1,99 @@
+import requests
+import pandas as pd
+from datetime import datetime
+import random
+
+# ------------------------ 1️⃣ User Inputs ------------------------
+departure = input("Enter departure city (IATA Code, e.g., JFK): ").upper()
+destination = input("Enter destination city (IATA Code, e.g., LAX): ").upper()
+start_date = input("Enter earliest departure date (YYYY-MM-DD): ")
+end_date = input("Enter latest return date (YYYY-MM-DD): ")
+preferred_class = input("Enter preferred class (Economy, Business, First Class): ").title()
+flight_type = input("Do you prefer 'Direct' or 'Layover' flights? ").title()
+
+# ------------------------ 2️⃣ Generate Mock Flight Data ------------------------
+def generate_mock_flights():
+    airports_us = ["JFK", "LAX", "ORD", "ATL", "DFW", "DEN", "SFO", "MIA", "SEA", "NWA"]
+    airports_eu = ["LHR", "CDG", "FRA", "AMS", "MAD", "ZRH", "BRU", "FCO", "DUB", "BCN"]
+    airlines = ["Delta", "United", "American", "Lufthansa", "Air France", "British Airways", "KLM", "Swiss"]
+    classes = ["Business", "First Class"]
+    flights = []
+
+    today = datetime.today()
+    for _ in range(1000):
+        dep = random.choice(airports_us)
+        dest = random.choice(airports_eu)
+        airline = random.choice(airlines)
+        flight_class = random.choice(classes)
+        stops = random.choice([0, 1])
+        baggage_fee = random.choice([0, 25, 50])
+        price = random.randint(800, 2500) if flight_class == "First Class" else random.randint(400, 1200)
+
+        departure_date = today + pd.to_timedelta(random.randint(1, 730), unit="d")
+        return_date = departure_date + pd.to_timedelta(random.randint(3, 14), unit="d")
+
+        flights.append({
+            "airline": airline,
+            "price": price,
+            "departure_date": departure_date.strftime('%Y-%m-%d'),
+            "return_date": return_date.strftime('%Y-%m-%d'),
+            "class": flight_class,
+            "stops": stops,
+            "baggage_fee": baggage_fee,
+            "departure": dep,
+            "destination": dest
+        })
+
+    # Add a guaranteed match flight for testing purposes
+    flights.append({
+        "airline": "TestAir",
+        "price": 999,
+        "departure_date": "2025-06-10",
+        "return_date": "2025-06-20",
+        "class": "Business",
+        "stops": 1,
+        "baggage_fee": 30,
+        "departure": "DFW",
+        "destination": "BRU"
+    })
+    return flights
+
+flights = generate_mock_flights()
+df = pd.DataFrame(flights)
+
+# ------------------------ 3️⃣ Filtering ------------------------
+df["departure_date"] = pd.to_datetime(df["departure_date"])
+df["return_date"] = pd.to_datetime(df["return_date"])
+start_date = pd.to_datetime(start_date)
+end_date = pd.to_datetime(end_date)
+
+df = df[(df["departure"] == departure) & (df["destination"] == destination)]
+df = df[(df["departure_date"] >= start_date) & (df["return_date"] <= end_date)]
+df = df[df["class"] == preferred_class]
+
+if flight_type == "Direct":
+    df = df[df["stops"] == 0]
+elif flight_type == "Layover":
+    df = df[df["stops"] > 0]
+
+# ------------------------ 4️⃣ Handle No Results ------------------------
+if df.empty:
+    print("\n❌ No flights found that match your search criteria.")
+else:
+    df = df.sort_values(by="price").head(3)  # Show top 3 cheapest matches
+    print("\n📊 Top 3 Cheapest Flights Available 📊\n")
+    print(df[["airline", "price", "departure_date", "return_date", "stops", "baggage_fee"]])
+
+    # ------------------------ 5️⃣ Display Results ------------------------
+    best_flight = df.iloc[0]
+    cheapest_dates = (best_flight["departure_date"].date(), best_flight["return_date"].date())
+
+    print("\n✈️ Recommended Travel Dates (Cheapest Option)")
+    print(f"🛫 Depart: {cheapest_dates[0]} | 🛬 Return: {cheapest_dates[1]} (Airline: {best_flight['airline']})")
+
+    print("\n💼 Baggage Fee Information")
+    for _, row in df.iterrows():
+        print(f"🛫 {row['airline']} - Ticket: ${row['price']} | Baggage Fee: ${row['baggage_fee']}")
+
+
+
