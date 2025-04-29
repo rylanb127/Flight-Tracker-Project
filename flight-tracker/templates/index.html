@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white min-h-screen flex flex-col items-center justify-start p-6">
+    <h1 class="text-4xl font-bold mb-6 text-blue-600">✈️ Flight Tracker</h1>
+
+    <div class="bg-gray-100 p-6 rounded-2xl shadow-md w-full max-w-lg">
+        <form id="flight-form" class="space-y-4">
+            <div class="flex space-x-4">
+                <input type="text" id="origin" placeholder="Origin (e.g., DFW)" required
+                    class="w-1/2 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <input type="text" id="destination" placeholder="Destination (e.g., BRU)" required
+                    class="w-1/2 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+            <div class="flex space-x-4">
+                <input type="date" id="depart_date" required
+                    class="w-1/2 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <input type="date" id="return_date" required
+                    class="w-1/2 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+            <div class="flex space-x-4">
+                <select id="preferred_class" required
+                    class="w-1/2 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="Economy">Economy</option>
+                    <option value="Business">Business</option>
+                    <option value="First Class">First Class</option>
+                </select>
+                <select id="flight_type" required
+                    class="w-1/2 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="Direct">Direct</option>
+                    <option value="Layover">Layover</option>
+                </select>
+            </div>
+            <button type="submit"
+                class="w-full p-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition">Track Flight</button>
+        </form>
+    </div>
+
+    <div id="result" class="mt-8 w-full max-w-lg"></div>
+
+    <script>
+        const form = document.getElementById('flight-form');
+        const resultDiv = document.getElementById('result');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const data = {
+                origin: document.getElementById('origin').value,
+                destination: document.getElementById('destination').value,
+                depart_date: document.getElementById('depart_date').value,
+                return_date: document.getElementById('return_date').value,
+                preferred_class: document.getElementById('preferred_class').value,
+                flight_type: document.getElementById('flight_type').value
+            };
+
+            resultDiv.innerHTML = '<p class="text-gray-500">Loading...</p>';
+
+            const response = await fetch('/track-flight', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.error) {
+                resultDiv.innerHTML = `
+                    <div class="bg-red-100 p-6 rounded-2xl shadow-lg text-red-600">
+                        <h2 class="text-2xl font-bold mb-2">❌ No Flights Found</h2>
+                        <p>${result.error}</p>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = '';
+
+                result.flights.forEach(flight => {
+                    resultDiv.innerHTML += `
+                        <div class="bg-white p-6 mb-4 rounded-2xl shadow-lg">
+                            <h2 class="text-2xl font-bold text-blue-500 mb-2">${flight.airline}</h2>
+                            <p class="text-gray-700"><strong>Price:</strong> ${flight.price}</p>
+                            <p class="text-gray-700"><strong>Origin:</strong> ${flight.origin}</p>
+                            <p class="text-gray-700"><strong>Destination:</strong> ${flight.destination}</p>
+                            <p class="text-gray-700"><strong>Departure Date:</strong> ${flight.departure_date}</p>
+                            <p class="text-gray-700"><strong>Return Date:</strong> ${flight.return_date}</p>
+                            <p class="text-gray-700"><strong>Class:</strong> ${flight.flight_class}</p>
+                            <p class="text-gray-700"><strong>Stops:</strong> ${flight.stops}</p>
+                            <p class="text-gray-700"><strong>Baggage Fee:</strong> ${flight.baggage_fee}</p>
+                        </div>
+                    `;
+                });
+            }
+        });
+    </script>
+</body>
+</html>
